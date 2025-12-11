@@ -116,60 +116,60 @@ export default function Projects() {
   }, [])
 
   return (
-    <section id="projects" ref={ref} className="py-8 px-4">
+    <section id="projects" ref={ref} className="py-4 sm:py-6 md:py-8 px-3 sm:px-4">
       <div className="max-w-6xl mx-auto">
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.3 }}
-          className="border border-green-500/30 bg-black/50 p-6"
+          className="border border-green-500/30 bg-black/50 p-4 sm:p-6"
         >
-          <div className="mb-6">
-            <h2 className="text-2xl font-bold text-green-400 mb-2">
+          <div className="mb-4 sm:mb-6">
+            <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-green-400 mb-2">
               $ ls projects/
             </h2>
             <div className="h-px bg-green-500/30 mb-4"></div>
           </div>
 
           {activeFilter && (
-            <div className="mb-4 text-green-300 text-sm">
+            <div className="mb-4 text-green-300 text-xs sm:text-sm">
               <span className="text-green-500">$</span> Filter: <span className="text-green-400">{activeFilter}</span>
             </div>
           )}
 
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             {filteredProjects.map((project, index) => (
               <motion.div
                 key={project.id}
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.1 }}
-                className="border-l-2 border-green-500/50 pl-4 py-2"
+                className="border-l-2 border-green-500/50 pl-3 sm:pl-4 py-2"
               >
                 <div className="flex items-start gap-2 mb-1">
-                  <span className="text-green-500">▸</span>
-                  <h3 className="text-green-400 font-bold">{project.title}</h3>
+                  <span className="text-green-500 shrink-0">▸</span>
+                  <h3 className="text-green-400 font-bold text-sm sm:text-base break-words">{project.title}</h3>
                 </div>
-                <p className="text-green-300 text-xs ml-4 mb-2">{project.description}</p>
-                <div className="flex flex-wrap gap-1 ml-4 mb-2">
+                <p className="text-green-300 text-xs sm:text-sm ml-4 mb-2 leading-relaxed">{project.description}</p>
+                <div className="flex flex-wrap gap-1 sm:gap-1.5 ml-4 mb-2">
                   {project.technologies.map((tech) => (
                     <span
                       key={tech}
-                      className="px-2 py-0.5 text-xs border border-green-500/30 text-green-400"
+                      className="px-1.5 sm:px-2 py-0.5 text-xs border border-green-500/30 text-green-400 whitespace-nowrap"
                     >
                       {tech}
                     </span>
                   ))}
                 </div>
                 {(project.link || project.github) && (
-                  <div className="ml-4 text-xs">
+                  <div className="ml-4 text-xs flex flex-wrap gap-2">
                     {project.link && (
-                      <a href={project.link} target="_blank" rel="noopener noreferrer" className="text-green-500 hover:text-green-400">
+                      <a href={project.link} target="_blank" rel="noopener noreferrer" className="text-green-500 hover:text-green-400 underline">
                         [live]
                       </a>
                     )}
                     {project.github && (
-                      <a href={project.github} target="_blank" rel="noopener noreferrer" className="text-green-500 hover:text-green-400 ml-2">
+                      <a href={project.github} target="_blank" rel="noopener noreferrer" className="text-green-500 hover:text-green-400 underline">
                         [code]
                       </a>
                     )}

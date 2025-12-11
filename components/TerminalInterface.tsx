@@ -32,29 +32,26 @@ interface ConversationState {
 
 const CONVERSATION_TIMEOUT = 300000 // 5 minutes
 
+const WELCOME_MESSAGES = [
+  { type: 'system' as const, content: 'Bharath Vadlamannati' },
+  { type: 'system' as const, content: 'Software Development Engineering Leader' },
+  { type: 'system' as const, content: '' },
+  { type: 'system' as const, content: 'Welcome. You know what to do.' },
+  { type: 'system' as const, content: '' },
+  { type: 'system' as const, content: 'Available commands:' },
+  { type: 'system' as const, content: '  about     - Who I am and what I do' },
+  { type: 'system' as const, content: '  projects  - Things I\'ve built' },
+  { type: 'system' as const, content: '  skills    - Tech stack and tools' },
+  { type: 'system' as const, content: '  contact   - Let\'s connect' },
+  { type: 'system' as const, content: '' },
+  { type: 'system' as const, content: 'Type "help" for more options, or just start exploring.' },
+]
+
 export default function TerminalInterface() {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      type: 'system',
-      content: 'Portfolio Terminal - Bharath Vadlamannati',
-      timestamp: new Date(),
-    },
-    {
-      type: 'system',
-      content: 'Software Development Engineering Leader | 7+ years experience',
-      timestamp: new Date(),
-    },
-    {
-      type: 'system',
-      content: '',
-      timestamp: new Date(),
-    },
-    {
-      type: 'system',
-      content: 'Execute commands to explore my portfolio. Type "help" for available commands.',
-      timestamp: new Date(),
-    },
-  ])
+  const [messages, setMessages] = useState<Message[]>([])
+  const [typingIndex, setTypingIndex] = useState(0)
+  const [typingText, setTypingText] = useState('')
+  const [isTyping, setIsTyping] = useState(true)
   const [inputText, setInputText] = useState('')
   const [conversation, setConversation] = useState<ConversationState>({
     isActive: false,
@@ -66,13 +63,95 @@ export default function TerminalInterface() {
   const inputRef = useRef<HTMLInputElement>(null)
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
   const processingRef = useRef<Set<string>>(new Set())
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   
   const { executeCommand } = useCommands()
+
+  // Helper to highlight command words in messages
+  const highlightCommands = (text: string) => {
+    // Separate 'ls' to use word boundaries, others can match with quotes
+    const shortCommands = ['ls'] // Commands that might appear inside other words
+    const otherCommands = ['help', 'about', 'projects', 'skills', 'contact', 'clear', 'cls', 'whoami', 'list', 'dir', 'exit', 'quit']
+    
+    // Match 'ls' only with word boundaries, others with optional quotes
+    const lsRegex = new RegExp(`\\b(${shortCommands.join('|')})\\b`, 'gi')
+    const otherRegex = new RegExp(`("?)(${otherCommands.join('|')})("?)`, 'gi')
+    
+    // First split by ls with word boundaries
+    let parts = text.split(lsRegex)
+    // Then split each part by other commands
+    const result: (string | JSX.Element)[] = []
+    
+    parts.forEach((part, partIdx) => {
+      if (partIdx % 2 === 1 && shortCommands.includes(part.toLowerCase())) {
+        // This is the 'ls' match
+        result.push(<span key={`ls-${partIdx}`} className="text-green-300 font-semibold">{part}</span>)
+      } else if (part) {
+        // Split by other commands
+        const subParts = part.split(otherRegex)
+        subParts.forEach((subPart, subIdx) => {
+          if (subPart) {
+            const lowerSubPart = subPart.replace(/[",]/g, '').toLowerCase()
+            if (otherCommands.includes(lowerSubPart)) {
+              result.push(<span key={`cmd-${partIdx}-${subIdx}`} className="text-green-300 font-semibold">{subPart}</span>)
+            } else {
+              result.push(<span key={`text-${partIdx}-${subIdx}`}>{subPart}</span>)
+            }
+          }
+        })
+      }
+    })
+    
+    return result
+  }
+
+  // Typing animation effect for welcome messages
+  useEffect(() => {
+    if (typingIndex >= WELCOME_MESSAGES.length) {
+      setIsTyping(false)
+      if (inputRef.current) {
+        inputRef.current.focus()
+      }
+      return
+    }
+
+    const currentMessage = WELCOME_MESSAGES[typingIndex]
+    let charIndex = 0
+
+    const typeChar = () => {
+      if (charIndex < currentMessage.content.length) {
+        setTypingText(currentMessage.content.substring(0, charIndex + 1))
+        charIndex++
+        typingTimeoutRef.current = setTimeout(typeChar, 30) // Typing speed
+      } else {
+        // Message complete, add to messages and move to next
+        setMessages(prev => [...prev, {
+          type: currentMessage.type,
+          content: currentMessage.content,
+          timestamp: new Date(),
+        }])
+        setTypingText('')
+        setTypingIndex(prev => prev + 1)
+      }
+    }
+
+    // Delay before starting to type each message
+    const delay = typingIndex === 0 ? 500 : typingIndex === 2 ? 300 : 100
+    typingTimeoutRef.current = setTimeout(() => {
+      typeChar()
+    }, delay)
+
+    return () => {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current)
+      }
+    }
+  }, [typingIndex])
 
   // Auto-scroll to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
+  }, [messages, typingText])
 
   const addMessage = useCallback((type: 'user' | 'system' | 'response' | 'error', content: string) => {
     setMessages(prev => {
@@ -128,32 +207,32 @@ export default function TerminalInterface() {
       addMessage('user', trimmedCommand)
       addMessage('response', `Available Commands:
 
-help
-  Show this help message
+  help
+    Show this help message
 
-clear, cls
-  Clear the terminal screen
+  clear, cls
+    Clear the terminal screen
 
-whoami
-  Show portfolio owner information
+  whoami
+    Show portfolio owner information
 
-ls, list, dir
-  List all available portfolio sections
+  ls, list, dir
+    List all available portfolio sections
 
-about
-  Show about me and background information
+  about
+    Show about me and background information
 
-projects
-  Display all portfolio projects
+  projects
+    Display all portfolio projects
 
-skills
-  Show technical skills and expertise
+  skills
+    Show technical skills and expertise
 
-contact
-  Display contact information and links
+  contact
+    Display contact information and links
 
-exit, quit
-  Close terminal and reload page
+  exit, quit
+    Close terminal and reload page
 
 Examples:
   $ about      → Show about information
@@ -304,32 +383,37 @@ Examples:
     }
   }, [inputText, processCommand, commandHistory, historyIndex, addMessage])
 
-  // Focus input on load
+  // Focus input after typing animation completes
   useEffect(() => {
-    inputRef.current?.focus()
-  }, [])
+    if (!isTyping && inputRef.current) {
+      const timer = setTimeout(() => {
+        inputRef.current?.focus()
+      }, 300)
+      return () => clearTimeout(timer)
+    }
+  }, [isTyping])
 
   return (
-    <div className="min-h-screen bg-black text-green-400 font-mono overflow-hidden">
+    <div className="min-h-screen bg-black text-green-400 font-mono overflow-hidden flex flex-col">
       {/* Terminal Header */}
-      <div className="border-b border-green-500/30 px-4 py-2 flex items-center justify-between bg-black/80">
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full bg-red-500"></div>
-          <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-          <div className="w-3 h-3 rounded-full bg-green-500"></div>
-          <span className="ml-3 text-green-400 text-xs font-mono">portfolioterm</span>
+      <div className="border-b border-green-500/30 px-3 sm:px-4 py-2 flex items-center justify-between bg-black/80 shrink-0">
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-red-500"></div>
+          <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-yellow-500"></div>
+          <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-green-500"></div>
+          <span className="ml-2 sm:ml-3 text-green-400 text-xs sm:text-sm font-mono">portfolioterm</span>
         </div>
       </div>
 
       {/* Terminal Content */}
-      <div className="h-[calc(100vh-180px)] overflow-y-auto p-4 bg-black">
-        <div className="space-y-0.5">
+      <div className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 bg-black">
+        <div className="space-y-0.5 max-w-7xl mx-auto">
           {messages.map((msg, idx) => (
             <motion.div
               key={idx}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="flex items-start gap-2 text-sm leading-relaxed"
+              className="flex items-start gap-2 sm:gap-3 text-xs sm:text-sm leading-relaxed"
             >
               <span className="text-green-500 shrink-0 font-mono select-none">
                 {msg.type === 'user' ? '$' : msg.type === 'system' ? '>' : msg.type === 'error' ? '!' : '→'}
@@ -340,10 +424,27 @@ Examples:
                 msg.type === 'error' ? 'text-red-400' :
                 'text-green-400'
               }`}>
-                {msg.content}
+                {msg.type === 'system' && messages.length <= WELCOME_MESSAGES.length 
+                  ? highlightCommands(msg.content)
+                  : msg.content
+                }
               </span>
             </motion.div>
           ))}
+          {/* Typing animation */}
+          {isTyping && typingText !== '' && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="flex items-start gap-2 sm:gap-3 text-xs sm:text-sm leading-relaxed"
+            >
+              <span className="text-green-500 shrink-0 font-mono select-none">{'>'}</span>
+              <span className="font-mono whitespace-pre-wrap break-words text-green-500/80">
+                {typingText}
+                <span className="inline-block w-2 h-4 bg-green-400 ml-0.5 typing-cursor">▊</span>
+              </span>
+            </motion.div>
+          )}
           <div ref={messagesEndRef} />
         </div>
 
@@ -354,7 +455,7 @@ Examples:
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
-              className="mt-6 border-t border-green-500/20 pt-4"
+              className="mt-4 sm:mt-6 border-t border-green-500/20 pt-4 sm:pt-6 max-w-7xl mx-auto"
             >
               {conversation.currentContent === 'show-about' && <About />}
               {conversation.currentContent === 'filter-projects' && <Projects />}
@@ -366,10 +467,10 @@ Examples:
       </div>
 
       {/* Terminal Input Area */}
-      <div className="border-t border-green-500/30 p-3 bg-black/80">
-        <form onSubmit={handleTextSubmit} className="flex items-center gap-2">
-          <span className="text-green-400 font-mono select-none">$</span>
-          <div className="flex-1 relative">
+      <div className="border-t border-green-500/30 p-3 sm:p-4 bg-black/80 shrink-0">
+        <form onSubmit={handleTextSubmit} className="flex items-center gap-2 max-w-7xl mx-auto">
+          <span className="text-green-400 font-mono select-none shrink-0">$</span>
+          <div className="flex-1 relative min-w-0">
             <input
               ref={inputRef}
               type="text"
@@ -380,19 +481,20 @@ Examples:
               }}
               onKeyDown={handleKeyPress}
               placeholder=""
-              className="w-full bg-transparent text-green-400 outline-none font-mono text-sm caret-green-400"
-              autoFocus
+              disabled={isTyping}
+              className="w-full bg-transparent text-green-400 outline-none font-mono text-xs sm:text-sm caret-green-400 disabled:opacity-50"
             />
             {!inputText && (
-              <span className="absolute left-0 text-green-500/50 font-mono text-sm pointer-events-none">
+              <span className="absolute left-0 text-green-500/50 font-mono text-xs sm:text-sm pointer-events-none truncate max-w-full">
                 Type a command or press Tab for completion...
               </span>
             )}
           </div>
         </form>
         {inputText.length === 0 && (
-          <div className="mt-2 text-xs text-green-500/50 font-mono">
-            Tip: Use ↑/↓ for command history, Tab for completion
+          <div className="mt-2 text-xs text-green-500/50 font-mono max-w-7xl mx-auto px-1">
+            <span className="hidden sm:inline">Tip: Use ↑/↓ for command history, Tab for completion</span>
+            <span className="sm:hidden">Tip: ↑/↓ history, Tab completion</span>
           </div>
         )}
       </div>
