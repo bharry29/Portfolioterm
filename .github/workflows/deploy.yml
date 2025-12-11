@@ -25,17 +25,17 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '20'
           cache: 'npm'
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Build static export
+      - name: Build static site
+        run: npm run build:prod
         env:
-          NEXT_PUBLIC_BASE_PATH: ''
-          NEXT_OUTPUT: export
-        run: npm run build:static
+          GITHUB_PAGES: 'true'
+          NODE_ENV: 'production'
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
@@ -55,4 +55,3 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
-

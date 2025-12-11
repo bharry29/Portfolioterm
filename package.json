@@ -5,9 +5,12 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "build:static": "NEXT_OUTPUT=export next build",
+    "build:static": "GITHUB_PAGES=true next build",
+    "build:prod": "GITHUB_PAGES=true NODE_ENV=production next build",
+    "export": "next build && next export",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "deploy": "npm run build:prod"
   },
   "dependencies": {
     "next": "14.0.4",
