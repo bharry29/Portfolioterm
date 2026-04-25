@@ -1,0 +1,10 @@
+services:
+  bharry29-portfolioterm:
+    build: .
+    image: bharry29-portfolioterm:latest
+    container_name: bharry29-portfolioterm
+    ports:
+      - "3002:3002"
+    environment:
+      NODE_ENV: production
+      PORT: 3002
